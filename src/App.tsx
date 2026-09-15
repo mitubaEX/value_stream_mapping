@@ -8,6 +8,7 @@ import { download, safeName } from './store/download'
 import { SummaryPanel } from './components/SummaryPanel'
 import { VsmDiagram } from './components/VsmDiagram'
 import { StepEditor } from './components/StepEditor'
+import { Glossary } from './components/Glossary'
 
 type View = 'current' | 'future'
 
@@ -32,6 +33,7 @@ export default function App() {
   return (
     <div className="app">
       <Header vs={vs} dispatch={dispatch} onExportSvg={exportSvg} />
+      <Glossary />
       <SummaryPanel current={currentMetrics} future={futureMetrics} unit={vs.unit} />
 
       <section className="diagram" aria-label="VSM 図">
