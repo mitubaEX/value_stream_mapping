@@ -34,3 +34,10 @@ npm run build    # dist/
 | Rolled %C&A | Π %C&A。最初から最後まで手戻りなしで通る確率 |
 
 詳しい構造は [docs/code-explanation.md](docs/code-explanation.md) を参照。
+
+## デプロイ (Cloudflare Workers 静的アセット)
+
+```sh
+npx wrangler login   # 初回のみ
+npm run deploy       # build → wrangler deploy
+```
