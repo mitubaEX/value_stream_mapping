@@ -33,6 +33,8 @@ npm run build    # dist/
 | Activity Ratio | Σ PT / Total Lead Time。低いほど待ちが多い |
 | Rolled %C&A | Π %C&A。最初から最後まで手戻りなしで通る確率 |
 
+公開 URL: https://value-stream-mapping.mituba.workers.dev
+
 詳しい構造は [docs/code-explanation.md](docs/code-explanation.md) を参照。
 
 ## デプロイ (Cloudflare Workers 静的アセット)
