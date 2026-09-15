@@ -9,6 +9,7 @@ import { SummaryPanel } from './components/SummaryPanel'
 import { VsmDiagram } from './components/VsmDiagram'
 import { StepEditor } from './components/StepEditor'
 import { Glossary } from './components/Glossary'
+import { PromptPanel } from './components/PromptPanel'
 
 type View = 'current' | 'future'
 
@@ -34,6 +35,7 @@ export default function App() {
     <div className="app">
       <Header vs={vs} dispatch={dispatch} onExportSvg={exportSvg} />
       <Glossary />
+      <PromptPanel unit={vs.unit} title={vs.title} onLoad={(value) => dispatch({ type: 'load', value })} />
       <SummaryPanel current={currentMetrics} future={futureMetrics} unit={vs.unit} />
 
       <section className="diagram" aria-label="VSM 図">

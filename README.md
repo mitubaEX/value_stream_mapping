@@ -21,6 +21,15 @@ npm run build    # dist/
 4. 「省略」にチェック、または「待ち削減 %」を動かすと Future State ができる。図の Current / Future タブで切替
 5. JSON 保存 / 読込、SVG 出力ができる。データはブラウザ (localStorage) に自動保存される
 
+## AI にデータを作らせる (手入力が面倒なとき)
+
+1. アプリの「▸ AI にデータを作らせる」を開き、対象の業務を一言で書いて「プロンプトをコピー」
+2. ChatGPT / Claude などに貼り付けて送る (AI が質問してきたら答える)
+3. AI の回答をそのまま「AI の回答を貼り付け」欄に貼って「読み込む」。コードフェンスや説明文が付いていても自動で取り除きます
+
+アプリ外で使うプロンプトは [docs/prompts/vsm-data-prompt.md](docs/prompts/vsm-data-prompt.md)、コツは [docs/prompts/README.md](docs/prompts/README.md) にあります。
+プロンプトの本体は `src/domain/promptTemplate.ts` で、変更したら `npm run prompt:export` で markdown を再生成します。
+
 ## そもそも VSM とは (初めての方へ)
 
 「頼んでから届くまで」の仕事の流れを 1 本の線にして、**どこで時間が消えているか**を見つける手法です。

@@ -96,3 +96,15 @@ table.steps input[type="range"] { width: 90px; vertical-align: middle; }
 .glossary-short { font-weight: 500; }
 .glossary-example { color: var(--muted); }
 .glossary-example span { color: var(--accent); font-weight: 600; margin-right: 4px; }
+
+/* prompt panel */
+.prompt-panel { margin: 0 0 16px; }
+.prompt-toggle { background: #fff8c5; border-color: #d4a72c; color: #9a6700; font-weight: 500; }
+.prompt-body { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 20px; margin-top: 8px; display: flex; flex-direction: column; gap: 12px; }
+.prompt-steps { margin: 0; padding-left: 1.4em; font-size: .9rem; }
+.prompt-desc { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+.prompt-row { display: flex; flex-direction: column; gap: 6px; }
+.prompt-row textarea { font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; resize: vertical; width: 100%; }
+.prompt-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.prompt-ok { color: var(--ok); font-size: .85rem; }
+.prompt-error { color: #cf222e; font-size: .85rem; }
