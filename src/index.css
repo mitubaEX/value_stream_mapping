@@ -1,0 +1,8 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif;
+  color: #1f2328;
+  background: #f6f8fa;
+  line-height: 1.5;
+}

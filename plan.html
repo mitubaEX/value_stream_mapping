@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VSM Generator 計画</title>
+<style>
+  :root { --fg:#1f2328; --muted:#59636e; --line:#d0d7de; --accent:#0969da; --warn:#bf3989; --ok:#1a7f37; --bg:#fff; --card:#f6f8fa; }
+  body { margin:0; font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; color:var(--fg); background:var(--bg); line-height:1.7; }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 { font-size: 1.8rem; margin-bottom: 4px; }
+  h2 { font-size: 1.3rem; border-bottom: 1px solid var(--line); padding-bottom: 6px; margin-top: 44px; }
+  h3 { font-size: 1.05rem; margin-top: 28px; }
+  .sub { color: var(--muted); margin-top:0; }
+  table { border-collapse: collapse; width: 100%; font-size: .95rem; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--card); }
+  code { background: var(--card); padding: 1px 5px; border-radius: 4px; font-size: .9em; }
+  pre { background: var(--card); padding: 14px; border-radius: 8px; overflow-x: auto; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; margin: 16px 0; }
+  .card.ok { border-color: var(--ok); }
+  .card.warn { border-color: var(--warn); }
+  .tag { display:inline-block; font-size:.75rem; padding:1px 8px; border-radius:999px; background:#ddf4ff; color:var(--accent); margin-right:6px; }
+  .mermaid { background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px; margin:12px 0; overflow-x:auto; }
+  ul { padding-left: 1.3em; }
+  li { margin: 4px 0; }
+  .q { background:#fff8c5; border:1px solid #d4a72c; border-radius:10px; padding:14px 20px; }
+</style>
+</head>
+<body>
+<main>
+<h1>Value Stream Mapping ジェネレータ 実装計画</h1>
+<p class="sub">2026-09-15 / 配置先: <code>playground/value_stream_mapping/</code></p>
+
+<h2>1. VSM の理解のすり合わせ</h2>
+<div class="card ok">
+<p><strong>あなたの理解「プロセスを俯瞰して無駄や省略できるプロセスを確認できるもの」は本質を捉えています。</strong>
+補足すると、VSM(Lean 由来、トヨタ生産方式 → 『Learning to See』)の肝は次の 3 点です。</p>
+<ul>
+  <li><strong>数値で無駄を可視化する</strong>: 各工程の「実作業時間 (Process Time)」と「待ち時間込みの経過時間 (Lead Time)」を並べ、<em>作業していない時間</em> がどれだけあるかを見せる。多くの現場では Lead Time の 8〜9 割が待ち時間。</li>
+  <li><strong>品質の手戻りも無駄として扱う</strong>: 各工程の「一発で正しく完了する率 (%C&amp;A: Percent Complete &amp; Accurate)」を掛け合わせ、後工程で何割が手戻るかを見せる。</li>
+  <li><strong>現状 (Current State) と 改善後 (Future State) を比較する</strong>: 工程を省略・並列化・待ち時間短縮したときに、全体 Lead Time がどう変わるかを見て改善点 (Kaizen Burst ⚡) を決める。</li>
+</ul>
+</div>
+
+<h3>典型的な VSM の見た目</h3>
+<pre class="mermaid">
+flowchart LR
+  C[顧客 / 要求] --> P1
+  subgraph 工程
+    P1["要件定義<br/>PT 2d / LT 5d<br/>%C&amp;A 80%"] -->|"⏳ 待ち 3d"| P2["設計<br/>PT 3d / LT 10d<br/>%C&amp;A 70%"]
+    P2 -->|"⏳ 待ち 7d"| P3["実装<br/>PT 5d / LT 8d<br/>%C&amp;A 90%"]
+    P3 -->|"⏳ 待ち 2d"| P4["レビュー<br/>PT 1d / LT 4d<br/>%C&amp;A 60%"]
+    P4 -->|"⏳ 待ち 5d"| P5["リリース<br/>PT 0.5d / LT 1d<br/>%C&amp;A 95%"]
+  end
+  P5 --> D[顧客 / 価値]
+  style P4 stroke:#bf3989,stroke-width:3px
+</pre>
+<p>下部に「タイムライン(はしご)」を描き、上段が待ち時間、下段が実作業時間。合計から次の指標を出します。</p>
+<table>
+<tr><th>指標</th><th>意味</th><th>式</th></tr>
+<tr><td>Total Lead Time</td><td>入口から出口までの経過時間</td><td>Σ LT</td></tr>
+<tr><td>Total Process Time</td><td>実際に手を動かした時間</td><td>Σ PT</td></tr>
+<tr><td>Activity Ratio</td><td>価値を生んでいる時間の割合。低いほど無駄が多い</td><td>Σ PT / Σ LT</td></tr>
+<tr><td>Rolled %C&amp;A</td><td>最初から最後まで手戻り無しで通る確率</td><td>Π %C&amp;A</td></tr>
+</table>
+
+<h2>2. 作るもの (MVP)</h2>
+<table>
+<tr><th>#</th><th>機能</th><th>内容</th></tr>
+<tr><td>F1</td><td>工程エディタ</td><td>工程を表形式で追加・編集・並べ替え・削除。項目: 名前、担当、Process Time、Lead Time、%C&amp;A、前工程からの待ち時間、メモ</td></tr>
+<tr><td>F2</td><td>VSM 図の自動生成</td><td>入力から SVG を描画。工程ボックス、待ち時間の▲、下部のタイムラインはしご、顧客の入口/出口</td></tr>
+<tr><td>F3</td><td>サマリ指標</td><td>Total LT / Total PT / Activity Ratio / Rolled %C&amp;A をリアルタイム表示</td></tr>
+<tr><td>F4</td><td>無駄の自動ハイライト</td><td>待ち時間比率が高い工程、%C&amp;A が低い工程に ⚡(Kaizen Burst) を付与。しきい値は設定可</td></tr>
+<tr><td>F5</td><td>Future State シミュレーション</td><td>各工程に「省略」「待ち時間を N% 削減」トグルを付け、Current vs Future の指標を並べて比較</td></tr>
+<tr><td>F6</td><td>保存 / 読込</td><td>localStorage 自動保存、JSON エクスポート / インポート、SVG ダウンロード</td></tr>
+</table>
+<p>MVP に <strong>含めない</strong>もの: 情報フロー(電子/手書き矢印の区別)、複数ブランチ分岐、ドラッグでの自由配置、サーバ保存、複数ユーザ。</p>
+
+<h3>画面イメージ</h3>
+<pre class="mermaid">
+flowchart TB
+  subgraph App["1 画面構成"]
+    direction TB
+    H["ヘッダ: タイトル / 読込 / 保存 / SVG 出力"]
+    S["サマリ: Total LT | Total PT | Activity Ratio | Rolled %C&amp;A  (Current → Future)"]
+    V["VSM 図 (SVG, 横スクロール)"]
+    E["工程エディタ (表): 追加・編集・並べ替え・省略トグル"]
+    H --> S --> V --> E
+  end
+</pre>
+
+<h2>3. 技術構成</h2>
+<table>
+<tr><th>項目</th><th>選択</th><th>理由</th></tr>
+<tr><td>ビルド / UI</td><td>Vite + React 18 + TypeScript</td><td>hobby_list_web など既存プロジェクトと同じ構成</td></tr>
+<tr><td>描画</td><td>素の SVG を React で生成</td><td>工程は横一列なのでレイアウト計算が単純。ライブラリ不要で軽い</td></tr>
+<tr><td>スタイル</td><td>CSS Modules(素の CSS)</td><td>Chakra は今回不要。依存を減らす</td></tr>
+<tr><td>テスト</td><td>Vitest + @testing-library/react</td><td>計算ロジックを red/green で先にテスト</td></tr>
+<tr><td>状態管理</td><td>useReducer + localStorage</td><td>単一画面なので外部ライブラリ不要</td></tr>
+</table>
+
+<h3>モジュール構成</h3>
+<pre class="mermaid">
+flowchart LR
+  subgraph domain["src/domain (純粋ロジック・テスト対象)"]
+    T["types.ts<br/>ProcessStep / ValueStream"]
+    M["metrics.ts<br/>totalLeadTime / activityRatio / rolledCA"]
+    W["waste.ts<br/>detectWaste (⚡判定)"]
+    F["futureState.ts<br/>applyScenario (省略・短縮)"]
+    L["layout.ts<br/>SVG 座標計算"]
+  end
+  subgraph ui["src/components"]
+    Ed["StepEditor"]
+    Vs["VsmDiagram (SVG)"]
+    Sm["SummaryPanel"]
+    Hd["Header (保存/読込)"]
+  end
+  St["src/store: useValueStream (reducer + localStorage)"]
+  T --> M --> W
+  T --> F --> M
+  T --> L --> Vs
+  M --> Sm
+  St --> Ed & Vs & Sm & Hd
+</pre>
+
+<h3>データモデル</h3>
+<pre>type ProcessStep = {
+  id: string;
+  name: string;
+  owner?: string;
+  processTime: number;   // 実作業時間
+  leadTime: number;      // 経過時間 (processTime を含む)
+  waitBefore: number;    // 前工程からこの工程が始まるまでの待ち
+  percentCA: number;     // 0..100
+  note?: string;
+  // Future State 用
+  skipped: boolean;
+  waitReductionPct: number; // 0..100
+};
+
+type ValueStream = {
+  title: string;
+  unit: "h" | "d";
+  steps: ProcessStep[];
+  thresholds: { waitRatio: number; percentCA: number };
+};</pre>
+
+<h2>4. 実装ステップ (red/green)</h2>
+<table>
+<tr><th>Step</th><th>やること</th><th>テスト</th></tr>
+<tr><td>1</td><td>Vite プロジェクト作成、Vitest 設定、空のテストが通ることを確認</td><td>環境確認</td></tr>
+<tr><td>2</td><td><code>metrics.ts</code>: 合計 LT / PT、Activity Ratio、Rolled %C&amp;A</td><td>red → green。0 件、1 件、複数件、%C&amp;A=0 の境界</td></tr>
+<tr><td>3</td><td><code>waste.ts</code>: しきい値による ⚡ 判定</td><td>red → green。しきい値ちょうど、両方該当</td></tr>
+<tr><td>4</td><td><code>futureState.ts</code>: 省略・待ち短縮を適用した ValueStream を返す</td><td>red → green。省略工程は指標から除外、待ち短縮の丸め</td></tr>
+<tr><td>5</td><td><code>layout.ts</code>: 工程数から SVG の座標・幅を計算</td><td>red → green。1 件 / 5 件で座標が単調増加</td></tr>
+<tr><td>6</td><td><code>useValueStream</code> reducer: add / update / remove / move / toggleSkip</td><td>red → green。並べ替えの境界</td></tr>
+<tr><td>7</td><td>UI: StepEditor → VsmDiagram → SummaryPanel → Header の順に実装</td><td>コンポーネントのスモークテスト</td></tr>
+<tr><td>8</td><td>localStorage 保存、JSON / SVG エクスポート</td><td>シリアライズの往復テスト</td></tr>
+<tr><td>9</td><td>サンプルデータ(上図のソフト開発フロー)を初期値として投入、動作確認</td><td>ブラウザで目視</td></tr>
+<tr><td>10</td><td>README.md と コード解説 (mermaid 付き markdown)、tmp_task.md 更新</td><td>—</td></tr>
+</table>
+
+<h2>5. 確認したいこと</h2>
+<div class="q">
+<ol>
+  <li><strong>時間の単位</strong>: 日 / 時間 の切替でよいか(デフォルトは「日」を想定)。</li>
+  <li><strong>対象ドメイン</strong>: 初期サンプルはソフトウェア開発フローでよいか。製造系のサンプル(在庫数・段取り時間など)が必要なら項目を追加します。</li>
+  <li><strong>Future State の操作</strong>: 「省略」「待ち短縮 %」の 2 つで足りるか。他に「並列化」「PT 短縮」を入れるか。</li>
+  <li><strong>スタイル</strong>: 素の CSS で進めてよいか(Chakra UI を使いたければ切替可)。</li>
+</ol>
+<p>特に指定がなければ上記のデフォルト(日 / ソフト開発サンプル / 2 操作 / 素の CSS)で進めます。</p>
+</div>
+
+</main>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: "neutral" });
+</script>
+</body>
+</html>
